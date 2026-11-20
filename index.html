@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#087f5b">
+  <meta name="description" content="Мой Прайс — калькулятор стоимости клининговых услуг и создание смет.">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <title>Мой Прайс</title>
+  <style>
+    :root {
+      --green:#087f5b; --green-dark:#066347; --mint:#e8f5ef;
+      --ink:#17352b; --muted:#718078; --line:#e4ece7;
+      --bg:#f5f8f6; --white:#fff; --danger:#b42318;
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink); }
+    .app { max-width:680px; margin:0 auto; min-height:100vh; padding: env(safe-area-inset-top) 16px calc(28px + env(safe-area-inset-bottom)); }
+    header { display:flex; align-items:center; justify-content:space-between; padding:22px 2px 18px; }
+    .brand { display:flex; align-items:center; gap:11px; }
+    .logo { width:42px; height:42px; border-radius:14px; background:var(--green); color:white; display:grid; place-items:center; font-weight:800; font-size:20px; }
+    h1 { font-size:20px; margin:0; letter-spacing:-.5px; }
+    .subtitle { color:var(--muted); font-size:12px; margin-top:3px; }
+    .pill { background:var(--mint); color:var(--green-dark); border-radius:999px; padding:7px 10px; font-size:11px; font-weight:700; }
+    .hero { background:linear-gradient(135deg,#087f5b,#0b684d); color:white; border-radius:22px; padding:20px; margin-bottom:16px; box-shadow:0 10px 25px #087f5b20; }
+    .hero small { opacity:.8; font-size:12px; }
+    .hero strong { display:block; font-size:27px; margin-top:5px; letter-spacing:-.7px; }
+    .hero p { font-size:13px; opacity:.85; margin:8px 0 0; line-height:1.45; }
+    .card { background:var(--white); border:1px solid var(--line); border-radius:18px; padding:17px; margin-bottom:13px; box-shadow:0 3px 12px #153d2a08; }
+    .section-title { display:flex; align-items:center; justify-content:space-between; gap:10px; margin:0 0 14px; font-size:15px; font-weight:750; }
+    label { display:block; color:var(--muted); font-size:12px; font-weight:600; margin:0 0 7px; }
+    input, select { width:100%; border:1px solid var(--line); background:#fbfdfb; border-radius:12px; padding:13px 12px; font:inherit; font-size:15px; color:var(--ink); outline:none; }
+    input:focus, select:focus { border-color:var(--green); box-shadow:0 0 0 3px #087f5b18; }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .field { margin-bottom:13px; }
+    .field:last-child { margin-bottom:0; }
+    .extras { display:grid; gap:10px; }
+    .extra { display:flex; align-items:center; gap:10px; padding:11px 12px; border:1px solid var(--line); border-radius:13px; }
+    .extra input { width:18px; height:18px; accent-color:var(--green); margin:0; }
+    .extra span { flex:1; font-size:13px; font-weight:600; }
+    .extra small { color:var(--muted); font-size:12px; }
+    .total { background:var(--mint); border-radius:16px; padding:16px; display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:14px; }
+    .total span { color:var(--green-dark); font-size:13px; font-weight:700; }
+    .total strong { color:var(--green-dark); font-size:25px; white-space:nowrap; }
+    button { border:0; border-radius:13px; padding:14px 16px; font:inherit; font-weight:750; cursor:pointer; }
+    .primary { width:100%; background:var(--green); color:white; margin-top:13px; }
+    .primary:active { background:var(--green-dark); }
+    .secondary { background:var(--mint); color:var(--green-dark); }
+    .ghost { background:#f3f6f4; color:var(--ink); }
+    .actions { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .actions button { font-size:13px; }
+    .hint { font-size:11px; color:var(--muted); line-height:1.5; margin:10px 1px 0; }
+    .history-item { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:11px 0; border-top:1px solid var(--line); }
+    .history-item:first-of-type { border-top:0; }
+    .history-item strong { font-size:13px; display:block; }
+    .history-item small { color:var(--muted); font-size:11px; }
+    .history-price { font-weight:800; color:var(--green-dark); white-space:nowrap; font-size:13px; }
+    .link-button { background:none; color:var(--green); padding:4px; font-size:12px; }
+    footer { text-align:center; color:#91a098; font-size:11px; padding:14px 0; }
+    #toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#17352b; color:white; border-radius:12px; padding:11px 16px; font-size:13px; opacity:0; pointer-events:none; transition:.2s; max-width:90%; text-align:center; }
+    #toast.show { opacity:1; }
+    .print-only { display:none; }
+    @media(max-width:390px) { .grid { grid-template-columns:1fr; gap:0; } .hero strong { font-size:24px; } }
+    @media print {
+      body { background:white; }
+      header, .hero, #calculator, #history, footer, .no-print { display:none !important; }
+      .app { max-width:none; padding:0; }
+      #printArea { display:block !important; color:#172b22; }
+      .print-sheet { padding:24px; }
+      .print-sheet h2 { color:#087f5b; margin-bottom:4px; }
+      .print-meta { color:#66756d; font-size:12px; margin-bottom:24px; }
+      .print-row { display:flex; justify-content:space-between; gap:20px; padding:11px 0; border-bottom:1px solid #ddd; }
+      .print-total { font-size:22px; font-weight:800; color:#087f5b; margin-top:20px; text-align:right; }
+      .print-note { margin-top:35px; color:#66756d; font-size:12px; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">
+      <div class="logo">М</div>
+      <div><h1>Мой Прайс</h1><div class="subtitle">Калькулятор услуг и смет</div></div>
+    </div>
+    <div class="pill">ПРОТОТИП 1.0</div>
+  </header>
+
+  <section class="hero">
+    <small>БЫСТРЫЙ РАСЧЁТ ЗАКАЗА</small>
+    <strong>Цена за минуту</strong>
+    <p>Рассчитайте стоимость уборки, добавьте услуги и подготовьте смету для клиента.</p>
+  </section>
+
+  <main id="calculator">
+    <section class="card">
+      <h2 class="section-title">01 · Параметры заказа</h2>
+      <div class="field">
+        <label for="service">Тип уборки</label>
+        <select id="service">
+          <option value="regular">Поддерживающая уборка</option>
+          <option value="general">Генеральная уборка</option>
+          <option value="after">После ремонта</option>
+          <option value="office">Уборка офиса</option>
+        </select>
+      </div>
+      <div class="grid">
+        <div class="field">
+          <label for="area">Площадь, м²</label>
+          <input id="area" type="number" min="1" max="10000" value="50" inputmode="decimal">
+        </div>
+        <div class="field">
+          <label for="discount">Скидка, ₽</label>
+          <input id="discount" type="number" min="0" value="0" inputmode="decimal">
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 class="section-title">02 · Дополнительные услуги</h2>
+      <div class="extras" id="extras">
+        <label class="extra"><input type="checkbox" value="windows"><span>Мытьё окон</span><small>+1 000 ₽</small></label>
+        <label class="extra"><input type="checkbox" value="fridge"><span>Мытьё холодильника</span><small>+500 ₽</small></label>
+        <label class="extra"><input type="checkbox" value="oven"><span>Мытьё духовки</span><small>+600 ₽</small></label>
+        <label class="extra"><input type="checkbox" value="balcony"><span>Уборка балкона</span><small>+700 ₽</small></label>
+      </div>
+      <p class="hint">Цены дополнительных услуг можно изменить в настройках ниже.</p>
+    </section>
+
+    <section class="card">
+      <h2 class="section-title">03 · Ваши цены</h2>
+      <div class="grid">
+        <div class="field"><label for="rateRegular">Поддерживающая, ₽/м²</label><input id="rateRegular" type="number" min="0" value="100"></div>
+        <div class="field"><label for="rateGeneral">Генеральная, ₽/м²</label><input id="rateGeneral" type="number" min="0" value="180"></div>
+        <div class="field"><label for="rateAfter">После ремонта, ₽/м²</label><input id="rateAfter" type="number" min="0" value="250"></div>
+        <div class="field"><label for="rateOffice">Офис, ₽/м²</label><input id="rateOffice" type="number" min="0" value="90"></div>
+      </div>
+      <div class="grid" style="margin-top:10px">
+        <div class="field"><label for="extraWindows">Окна, ₽</label><input id="extraWindows" type="number" min="0" value="1000"></div>
+        <div class="field"><label for="extraFridge">Холодильник, ₽</label><input id="extraFridge" type="number" min="0" value="500"></div>
+        <div class="field"><label for="extraOven">Духовка, ₽</label><input id="extraOven" type="number" min="0" value="600"></div>
+        <div class="field"><label for="extraBalcony">Балкон, ₽</label><input id="extraBalcony" type="number" min="0" value="700"></div>
+      </div>
+      <button class="secondary" id="savePrices" style="width:100%;margin-top:4px">Сохранить мои цены</button>
+    </section>
+
+    <section class="card">
+      <h2 class="section-title">04 · Итог расчёта</h2>
+      <div class="total"><span>Стоимость заказа</span><strong id="total">5 000 ₽</strong></div>
+      <div class="actions" style="margin-top:13px">
+        <button class="ghost" id="saveOrder">Сохранить расчёт</button>
+        <button class="secondary" id="makePdf">Создать PDF-смету</button>
+      </div>
+      <p class="hint">PDF создаётся через системное меню печати Android. Выберите «Сохранить как PDF».</p>
+    </section>
+  </main>
+
+  <section class="card" id="history">
+    <h2 class="section-title">Последние расчёты <button class="link-button" id="clearHistory">Очистить</button></h2>
+    <div id="historyList"><p class="hint">Сохранённых расчётов пока нет.</p></div>
+  </section>
+
+  <section id="printArea" class="print-only"></section>
+  <footer>Мой Прайс · Прототип для тестирования · Цены задаёт пользователь</footer>
+</div>
+<div id="toast"></div>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const serviceNames = {
+    regular: "Поддерживающая уборка",
+    general: "Генеральная уборка",
+    after: "Уборка после ремонта",
+    office: "Уборка офиса"
+  };
+  const priceIds = {
+    regular: "rateRegular", general: "rateGeneral",
+    after: "rateAfter", office: "rateOffice"
+  };
+  const extras = {
+    windows: { name: "Мытьё окон", input: "extraWindows" },
+    fridge: { name: "Мытьё холодильника", input: "extraFridge" },
+    oven: { name: "Мытьё духовки", input: "extraOven" },
+    balcony: { name: "Уборка балкона", input: "extraBalcony" }
+  };
+  const rub = n => new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(n) + " ₽";
+  const num = id => Math.max(0, Number($(id).value) || 0);
+  let lastQuote = null;
+
+  function quote() {
+    const service = $("service").value;
+    const area = Math.max(1, Number($("area").value) || 1);
+    const rate = num(priceIds[service]);
+    const base = area * rate;
+    const chosen = [...document.querySelectorAll("#extras input:checked")].map(el => ({
+      key: el.value, name: extras[el.value].name, price: num(extras[el.value].input)
+    }));
+    const extraTotal = chosen.reduce((sum, item) => sum + item.price, 0);
+    const discount = Math.min(num("discount"), base + extraTotal);
+    const total = Math.max(0, base + extraTotal - discount);
+    return { service, serviceName: serviceNames[service], area, rate, base, chosen, extraTotal, discount, total, date: new Date().toLocaleDateString("ru-RU") };
+  }
+
+  function render() {
+    lastQuote = quote();
+    $("total").textContent = rub(lastQuote.total);
+    document.querySelectorAll("#extras .extra small").forEach((el, i) => {
+      const key = Object.keys(extras)[i];
+      el.textContent = "+ " + rub(num(extras[key].input));
+    });
+  }
+
+  function toast(message) {
+    const el = $("toast"); el.textContent = message; el.classList.add("show");
+    setTimeout(() => el.classList.remove("show"), 2300);
+  }
+
+  function getPrices() {
+    const ids = [...Object.values(priceIds), ...Object.values(extras).map(x => x.input)];
+    return Object.fromEntries(ids.map(id => [id, $(id).value]));
+  }
+
+  function savePrices() {
+    localStorage.setItem("moiPraisPrices", JSON.stringify(getPrices()));
+    toast("Ваши цены сохранены на устройстве");
+  }
+
+  function loadPrices() {
+    try {
+      const saved = JSON.parse(localStorage.getItem("moiPraisPrices") || "{}");
+      Object.entries(saved).forEach(([id, value]) => { if ($(id)) $(id).value = value; });
+    } catch (_) {}
+  }
+
+  function getHistory() {
+    try { return JSON.parse(localStorage.getItem("moiPraisHistory") || "[]"); }
+    catch (_) { return []; }
+  }
+
+  function renderHistory() {
+    const history = getHistory();
+    const host = $("historyList");
+    if (!history.length) { host.innerHTML = '<p class="hint">Сохранённых расчётов пока нет.</p>'; return; }
+    host.innerHTML = "";
+    history.slice(0, 10).forEach(item => {
+      const row = document.createElement("div"); row.className = "history-item";
+      const left = document.createElement("div");
+      const title = document.createElement("strong"); title.textContent = item.serviceName;
+      const meta = document.createElement("small"); meta.textContent = item.date + " · " + item.area + " м²";
+      left.append(title, meta);
+      const price = document.createElement("div"); price.className = "history-price"; price.textContent = rub(item.total);
+      row.append(left, price); host.append(row);
+    });
+  }
+
+  function saveOrder() {
+    const q = quote();
+    const history = getHistory();
+    history.unshift({ ...q, id: Date.now() });
+    localStorage.setItem("moiPraisHistory", JSON.stringify(history.slice(0, 30)));
+    renderHistory(); toast("Расчёт сохранён");
+  }
+
+  function makePdf() {
+    const q = quote();
+    const extraRows = q.chosen.map(x => `<div class="print-row"><span>${escapeHtml(x.name)}</span><strong>${rub(x.price)}</strong></div>`).join("");
+    $("printArea").innerHTML = `
+      <div class="print-sheet">
+        <h2>МОЙ ПРАЙС</h2>
+        <div class="print-meta">Предварительная смета · ${q.date}</div>
+        <h3>Расчёт стоимости уборки</h3>
+        <div class="print-row"><span>Тип услуги</span><strong>${escapeHtml(q.serviceName)}</strong></div>
+        <div class="print-row"><span>Площадь</span><strong>${q.area} м²</strong></div>
+        <div class="print-row"><span>Цена за м²</span><strong>${rub(q.rate)}</strong></div>
+        <div class="print-row"><span>Основная услуга</span><strong>${rub(q.base)}</strong></div>
+        ${extraRows}
+        <div class="print-row"><span>Скидка</span><strong>− ${rub(q.discount)}</strong></div>
+        <div class="print-total">ИТОГО: ${rub(q.total)}</div>
+        <div class="print-note">Смета является предварительным расчётом. Итоговая стоимость может быть согласована с заказчиком до начала работ.</div>
+      </div>`;
+    window.print();
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+  }
+
+  document.querySelectorAll("input, select").forEach(el => el.addEventListener("input", render));
+  $("savePrices").addEventListener("click", savePrices);
+  $("saveOrder").addEventListener("click", saveOrder);
+  $("makePdf").addEventListener("click", makePdf);
+  $("clearHistory").addEventListener("click", () => {
+    if (confirm("Удалить все сохранённые расчёты на этом устройстве?")) {
+      localStorage.removeItem("moiPraisHistory"); renderHistory(); toast("История очищена");
+    }
+  });
+
+  loadPrices(); render(); renderHistory();
+
+  if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+    window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(() => {}));
+  }
+})();
+</script>
+</body>
+</html>

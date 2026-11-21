@@ -316,7 +316,29 @@ function migrateCatalog(){let items=read(KEYS.catalog,null);if(Array.isArray(ite
 function mainCatalog(){return getCatalog().filter(x=>x.type==='service'&&x.legacyRole!=='extra'&&x.isActive!==false)}
 function extraCatalog(){return getCatalog().filter(x=>x.type==='service'&&x.legacyRole==='extra'&&x.isActive!==false)}
 function catalogTypeName(t){return t==='service'?'Услуга':t==='product'?'Товар':'Материал'}
-function renderUniversalCatalog(){const body=$('universalCatalogBody');if(!body)return;const q=($('catalogSearch')?.value||'').toLowerCase(),t=$('catalogTypeFilter')?.value||'all',st=$('catalogStatusFilter')?.value||'active';const rows=getCatalog().filter(x=>(t==='all'||x.type===t)&&(st==='all'||(st==='archived'?x.isActive===false:x.isActive!==false))&&(`${x.name} ${x.category||''} ${x.sku||''}`.toLowerCase().includes(q))).sort((a,b)=>(a.sortOrder||0)-(b.sortOrder||0));body.innerHTML=rows.length?rows.map(x=>`<tr><td><b>${esc(x.name)}</b><div class="small muted">${esc(x.category||'Без категории')} · ID: ${esc(x.id)}</div></td><td>${catalogTypeName(x.type)}</td><td>${esc(x.unit||'—')}</td><td>${x.type==='material'?'—':rub(x.price)}</td><td>${rub(x.type==='material'?(x.costPerUnit??x.purchasePrice):(x.purchasePrice||0))}</td><td>${x.trackStock?Number(x.stockQuantity)||0:'—'}</td><td>${x.isActive===false?'<span class="tag red">Архив</span>':'<span class="tag green">Активна</span>'}</td><td><div class="row-actions"><button class="icon-btn" onclick="openCatalogModal('${esc(x.id)}')">Изменить</button>${x.isActive===false?`<button class="icon-btn" onclick="restoreCatalogItem('${esc(x.id)}')">Вернуть</button>`:`<button class="icon-btn" onclick="archiveCatalogItem('${esc(x.id)}')">В архив</button>`}</div></td></tr>`).join(''):'<tr><td colspan="8" class="empty">Позиции не найдены. Добавьте первую позицию.</td></tr>'}
+function renderUniversalCatalog(){
+ const body=$('universalCatalogBody');if(!body)return;
+ const normalize=v=>String(v??'').toLocaleLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+ const q=normalize($('catalogSearch')?.value||'');
+ const type=$('catalogTypeFilter')?.value||'all';
+ const status=$('catalogStatusFilter')?.value||'active';
+ const rows=getCatalog().filter(x=>{
+  const typeMatch=type==='all'||String(x.type||'service')===type;
+  const active=x.isActive!==false;
+  const statusMatch=status==='all'||(status==='archived'?!active:active);
+  const haystack=normalize([x.name,x.category,x.sku].filter(Boolean).join(' '));
+  return typeMatch&&statusMatch&&(!q||haystack.includes(q));
+ }).sort((a,b)=>(Number(a.sortOrder)||0)-(Number(b.sortOrder)||0));
+ body.innerHTML=rows.length?rows.map(x=>`<tr><td><b>${esc(x.name)}</b><div class="small muted">${esc(x.category||'Без категории')} · ID: ${esc(x.id)}</div></td><td>${catalogTypeName(x.type)}</td><td>${esc(x.unit||'—')}</td><td>${x.type==='material'?'—':rub(x.price)}</td><td>${rub(x.type==='material'?(x.costPerUnit??x.purchasePrice):(x.purchasePrice||0))}</td><td>${x.trackStock?Number(x.stockQuantity)||0:'—'}</td><td>${x.isActive===false?'<span class="tag red">Архив</span>':'<span class="tag green">Активна</span>'}</td><td><div class="row-actions"><button class="icon-btn" onclick="openCatalogModal('${esc(x.id)}')">Изменить</button>${x.isActive===false?`<button class="icon-btn" onclick="restoreCatalogItem('${esc(x.id)}')">Вернуть</button>`:`<button class="icon-btn" onclick="archiveCatalogItem('${esc(x.id)}')">В архив</button>`}</div></td></tr>`).join(''):'<tr><td colspan="8" class="empty">Позиции не найдены. Добавьте первую позицию.</td></tr>';
+}
+// The settings page is rendered inside an IIFE; expose the renderer for the inline handlers.
+window.renderUniversalCatalog=renderUniversalCatalog;
+['catalogSearch','catalogTypeFilter','catalogStatusFilter'].forEach(id=>{
+ const el=$(id);if(!el||el.dataset.catalogFilterBound==='1')return;
+ el.dataset.catalogFilterBound='1';
+ el.addEventListener(id==='catalogSearch'?'input':'change',renderUniversalCatalog);
+});
+
 window.openCatalogModal=(id=null)=>{const x=id?getCatalog().find(v=>String(v.id)===String(id)):null;$('catalogModalTitle').textContent=x?'Редактировать позицию':'Новая позиция каталога';$('catalogId').value=x?.id||'';$('catalogType').value=x?.type||'service';$('catalogServiceRole').value=x?.legacyRole||'main';$('catalogName').value=x?.name||'';$('catalogCategory').value=x?.category||'';$('catalogUnit').value=x?.unit||'шт.';$('catalogPrice').value=x?.price??0;$('catalogPriceType').value=x?.priceType||'fixed';$('catalogPurchasePrice').value=x?.purchasePrice??x?.costPerUnit??0;$('catalogSku').value=x?.sku||'';$('catalogStock').value=x?.stockQuantity??0;$('catalogMinStock').value=x?.minStock??0;$('catalogRecipe').value=JSON.stringify(x?.materialRecipe||[],null,2);$('catalogDescription').value=x?.description||x?.note||'';updateCatalogForm();$('catalogModal').classList.add('open')};
 window.closeCatalogModal=()=>$('catalogModal').classList.remove('open');
 window.updateCatalogForm=()=>{const t=$('catalogType').value;$('catalogServiceRoleWrap').style.display=t==='service'?'block':'none';$('catalogRecipeWrap').style.display=t==='service'?'block':'none';$('catalogPriceLabel').textContent=t==='material'?'Закупочная цена за единицу':'Цена клиенту';$('catalogPurchasePrice').closest('.field').style.display=t==='service'?'none':'block'};
